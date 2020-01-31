@@ -30,7 +30,7 @@ Route::group(['middleware' => ['auth']], function ($router) {
     $router->get('/user', 'UserController@index');
     $router->get('/user/{id}', 'UserController@show');
     $router->put('/user/{id}', 'UserController@update');
-    $router->delete('petugas/{id}', 'UserController@destroy');
+    $router->delete('user/{id}', 'UserController@destroy');
 
     // Hotel End-Point
     $router->get('/hotel', 'hotelController@index');
