@@ -17,11 +17,11 @@ class Reservations extends Migration
             $table->bigIncrements('reservation_id');
             
             $table->integer('hotel_id')->index('hotel_id_foreign');
+            $table->string('hotel_name', 128);
             $table->integer('user_id')->index('user_id_foreign');
             $table->integer('room_id')->index('room_id_foreign');
-            $table->string('hotel_name', 128);
             $table->enum('room_type', array('luxury', 'premium', 'standard'));
-            $table->string('night_stay', 3);
+            $table->integer('night_stay');
 
             $table->timestamps();
         });
