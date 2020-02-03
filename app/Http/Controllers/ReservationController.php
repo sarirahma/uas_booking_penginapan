@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
 class ReservationController extends Controller {
     public function index(Request $request) {
         $acceptHeader = $request->header('Accept');
-        $id = Auth::guard('user')->user()->user_id;
+        $id = Auth::guard('admin')->user()->user_id;
 
         if (Gate::allows('admin')) {
             $reservation = Reservation::OrderBy("reservation_id", "DESC")->paginate(10)->toArray();
@@ -84,7 +84,7 @@ class ReservationController extends Controller {
             $input = $request->all();
 
             $validationRules = [
-                'hotel_id' => 'required|in:pelayanan,infrastruktur',
+                'hotel_id' => 'required',
                 'hotel_name' => 'required',
                 'room_id' => 'required',
                 'room_type' => 'required|in:luxury,premium,standard',
@@ -136,7 +136,7 @@ class ReservationController extends Controller {
             if ($acceptHeader === 'application/json') {
                 return response()->json($reservation, 200);
             } else {
-                $xml = new \SimpleXMLElement('<Keluhan/>');
+                $xml = new \SimpleXMLElement('<Reservation/>');
 
                 $xml->addChild('reservation_id', $reservation->reservation_id);
                 $xml->addChild('hotel_id', $reservation->hotel_id);
@@ -179,7 +179,7 @@ class ReservationController extends Controller {
         $input = $request->all();
 
         $validationRules =[
-            'hotel_id' => 'required|in:pelayanan,infrastruktur',
+            'hotel_id' => 'required',
             'hotel_name' => 'required',
             'room_id' => 'required',
             'room_type' => 'required|in:luxury,premium,standard',
@@ -238,7 +238,7 @@ class ReservationController extends Controller {
             ], 404);
         }
 
-        if (Gate::allows('admin') || $reservation->user_id != Auth::guard('user')->user()->user_id) {
+        if (Gate::allows('admin') || $reservation->user_id != Auth::guard('admin')->user()->user_id) {
             return response()->json([
                 'success' => false,
                 'status' => 403, 
@@ -247,23 +247,19 @@ class ReservationController extends Controller {
         }
 
         if ($acceptHeader === 'application/json' || $acceptHeader === 'application/xml') {   
-            $keluhan->delete();
+            $reservation->delete();
             $response = [
                 'message' => 'Deleted Successfully!',
-                'keluhan_id' => $id
+                'reservation_id' => $id
             ];
 
-            // Response Accept : 'application/json'
             if ($acceptHeader === 'application/json') {
                 return response()->json($response, 200);
-            } 
-            
-            // Response Accept : 'application/xml'
-            else {
-                $xml = new \SimpleXMLElement('<Keluhan/>');
+            } else {
+                $xml = new \SimpleXMLElement('<Reservation/>');
 
                 $xml->addChild('message', 'Deleted Successfully!');
-                $xml->addChild('petugas_id', $id);
+                $xml->addChild('reservation_id', $id);
 
                 return $xml->asXML();
             }
