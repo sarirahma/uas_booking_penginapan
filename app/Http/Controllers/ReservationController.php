@@ -1,8 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\Reservation;
-use App\Reservation as AppReservation;
+use App\Hotel;
+use App\Room;
+use App\Reservation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Gate;
 class ReservationController extends Controller {
     public function index(Request $request) {
         $acceptHeader = $request->header('Accept');
-        $id = Auth::guard('admin')->user()->user_id;
+        $id = Auth::user()->user_id;
 
         if (Gate::allows('admin')) {
             $reservation = Reservation::OrderBy("reservation_id", "DESC")->paginate(10)->toArray();
@@ -71,41 +72,67 @@ class ReservationController extends Controller {
 
 	public function store(Request $request) {
         $acceptHeader = $request->header('Accept');
+        $contentTypeHeader = $request->header('Content-Type');
+        $input = $request->all();
 
         if (Gate::allows('admin')) {
             return response()->json([
                 'success' => false,
-                'status' => 403,
+                'status' => 403, 
                 'message' => 'You are Unauthorized'
             ], 403);
         }
+        
+        $validationRules = [
+            'hotel_id' => 'required|exists:hotels',
+            'room_id' => 'required|exists:rooms',
+            'night_stay' => 'required'
+        ];
 
-        if ($acceptHeader === 'application/json' || $acceptHeader === 'application/xml') {
-            $input = $request->all();
+        $validator = Validator::make($input, $validationRules);
 
-            $validationRules = [
-                'hotel_id' => 'required',
-                'hotel_name' => 'required',
-                'room_id' => 'required',
-                'room_type' => 'required|in:luxury,premium,standard',
-                'night_stay' => 'required'
-            ];
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
 
-            $validator = Validator::make($input, $validationRules);
+        $reservation= new Reservation;
+        $reservation->hotel_id = $request->input('hotel_id');
+        $hotel = Hotel::Find($request->input('hotel_id'));
+        $reservation->hotel_name = $hotel->name;
+        $reservation->room_id = $request->input('room_id');
+        $room = Room::Find($request->input('room_id'));
+        $reservation->room_type = $room->room_type;
+        $reservation->user_id = Auth::user()->user_id;
+        $reservation->night_stay = $request->input('night_stay');
 
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 400);
+        if ($acceptHeader === 'application/json' || $contentTypeHeader === 'application/xml') {
+            if ($contentTypeHeader === 'application/json' || $contentTypeHeader === 'application/xml') {
+                if ($acceptHeader === 'application/json' && $contentTypeHeader === 'application/json') {
+                    $reservation->save();
+
+                    return response()->json($reservation, 200);
+                } else if ($acceptHeader === 'appication/xml' && $contentTypeHeader === 'application/xml'){
+                    $reservation->save();
+
+                    $xml = new \SimpleXMLElement('<room/>');
+
+                    $xml->addChild('user_id', $reservation->user_id);
+                    $xml->addChild('hotel_id', $reservation->hotel_id);
+                    $xml->addChild('hotel_name', $reservation->hotel_name);
+                    $xml->addChild('room_id', $reservation->room_id);
+                    $xml->addChild('room_type', $reservation->room_type);
+                    $xml->addChild('night_stay', $room->night_stay);
+                    $xml->addChild('created_at', $room->created_at);
+                    $xml->addChild('updated_at', $room->updated_at);
+
+                    return $xml->asXML();
+                }
+                else {
+                    return response('Not Acceptable!', 406);
+                }
+            } else {
+                return response('Unsupported Media Type', 403);
             }
-
-            $reservation= new Reservation;
-            $reservation->hotel_id = $request->input('hotel_id');
-            $reservation->hotel_name = $request->input('hotel_name');
-            $reservation->room_id = $request->input('room_id');
-            $reservation->room_type = $request->input('room_type');
-            $reservation->user_id = Auth::guard('admin')->user()->user_id;
-            $reservation->night_stay = $request->input('night_stay');
-            $reservation->save();
-            return response()->json($reservation, 200);
         } else {
             return response('Not Acceptable!', 406);
         }
@@ -113,14 +140,16 @@ class ReservationController extends Controller {
 
     public function show(Request $request, $id) {
         $acceptHeader = $request->header('Accept');
-        $reservation = AppReservation::find($id);
+        $reservation = Reservation::find($id);
         
         if (Gate::denies('admin')) {
-            return response()->json([
-                'success' => false,
-                'status' => 403,
-                'message' => 'You are Unauthorized'
-            ], 403);
+            if ($reservation->user_id != Auth::user()->user_id) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'You are Unauthorized'
+                ], 403);
+            }
         }
 
         if (!$reservation) {
@@ -157,8 +186,15 @@ class ReservationController extends Controller {
     public function update(Request $request, $id) {
         $acceptHeader = $request->header('Accept');
         $contentTypeHeader = $request->header('Content-Type');
-        
         $reservation = Reservation::find($id);
+
+        if (Gate::allows('admin') || $reservation->user_id != Auth::user()->user_id) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You are Unauthorized'
+            ], 403);
+        }
 
         if (!$reservation) {
             return response()->json([
@@ -168,21 +204,11 @@ class ReservationController extends Controller {
             ], 404);
         }
 
-        if (Gate::allows('admin') || $reservation->user_id != Auth::guard('admin')->user()->user_id) {
-            return response()->json([
-                'success' => false,
-                'status' => 403,
-                'message' => 'You are Unauthorized'
-            ], 403);
-        }
-
         $input = $request->all();
 
         $validationRules =[
-            'hotel_id' => 'required',
-            'hotel_name' => 'required',
-            'room_id' => 'required',
-            'room_type' => 'required|in:luxury,premium,standard',
+            'hotel_id' => 'required|exists:hotels',
+            'room_id' => 'required|exists:rooms',
             'night_stay' => 'required'
         ];
         
@@ -207,9 +233,7 @@ class ReservationController extends Controller {
 
                     $xml->addChild('reservation_id', $reservation->reservation_id);
                     $xml->addChild('hotel_id', $reservation->hotel_id);
-                    $xml->addChild('hotel_name', $reservation->hotel_name);
                     $xml->addChild('room_id', $reservation->room_id);
-                    $xml->addChild('room_type', $reservation->room_type);
                     $xml->addChild('night_stay', $reservation->night_stay);
                     $xml->addChild('created_at', $reservation->created_at);
                     $xml->addChild('updated_at', $reservation->updated_at);
@@ -238,7 +262,7 @@ class ReservationController extends Controller {
             ], 404);
         }
 
-        if (Gate::allows('admin') || $reservation->user_id != Auth::guard('admin')->user()->user_id) {
+        if (Gate::allows('admin') || $reservation->user_id != Auth::user()->user_id) {
             return response()->json([
                 'success' => false,
                 'status' => 403, 

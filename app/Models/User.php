@@ -15,7 +15,7 @@ class User extends Model implements AuthenticableContract, AuthorizeableContract
     protected $table = 'users';
     protected $primaryKey = 'user_id';
 
-    protected $filleable = array('full_name', 'email', 'password', 'phone_number');
+    protected $fillable = array('full_name', 'email', 'password', 'phone_number');
     public $timestamps = true;
 
     /**

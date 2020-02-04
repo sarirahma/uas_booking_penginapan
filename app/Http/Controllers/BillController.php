@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\Bill;
+use App\Bill;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Gate;
 class BillController extends Controller {
     public function index(Request $request) {
         $acceptHeader = $request->header('Accept');
-        $id = Auth::guard('admin')->user()->user_id;
+        $id = Auth::user()->user_id;
 
         if (Gate::allows('admin')) {
             $bill = Bill::OrderBy("bill_id", "DESC")->paginate(10)->toArray();
@@ -70,7 +70,7 @@ class BillController extends Controller {
 	public function store(Request $request) {
         $acceptHeader = $request->header('Accept');
 
-        if (Gate::allows('admin')) {
+        if (Gate::denies('admin')) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -93,7 +93,7 @@ class BillController extends Controller {
             }
 
             $bill= new Bill;
-            $bill->user_id = Auth::guard('admin')->user()->user_id;
+            $bill->user_id = Auth::user()->user_id;
             $bill->reservation_id = $request->input('reservation_id');
             $bill->total = $request->input('total');
             $bill->save();
@@ -108,11 +108,13 @@ class BillController extends Controller {
         $bill = Bill::find($id);
         
         if (Gate::denies('admin')) {
-            return response()->json([
-                'success' => false,
-                'status' => 403,
-                'message' => 'You are Unauthorized'
-            ], 403);
+            if ($bill->user_id != Auth::user()->user_id) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 403,
+                    'message' => 'You are Unauthorized'
+                ], 403);
+            }
         }
 
         if (!$bill) {
@@ -158,7 +160,7 @@ class BillController extends Controller {
             ], 404);
         }
 
-        if (Gate::allows('admin') || $bill->user_id != Auth::guard('admin')->user()->user_id) {
+        if (Gate::denies('admin')) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -169,7 +171,6 @@ class BillController extends Controller {
         $input = $request->all();
 
         $validationRules =[
-            'bill_id' => $id,
             'reservation_id' => 'required|exists:reservations',
             'total' => 'required'
         ];
@@ -221,7 +222,7 @@ class BillController extends Controller {
             ], 404);
         }
 
-        if (Gate::allows('admin') || $bill->user_id != Auth::guard('user')->user()->user_id) {
+        if (Gate::denies('admin')) {
             return response()->json([
                 'success' => false,
                 'status' => 403, 

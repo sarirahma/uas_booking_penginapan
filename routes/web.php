@@ -19,9 +19,9 @@ $router->get('/', function () use ($router) {
 
 // Authentication End-Point
 Route::group(['prefix' => 'auth'], function () use ($router) {
-    $router->post('/user/register', 'Auth\\UserAuthController@register');
-    $router->post('/user/login', 'Auth\\UserAuthController@login');
-    $router->post('/user/logout', 'Auth\\UserAuthController@logout');
+    $router->post('/register', 'Auth\\UserAuthController@register');
+    $router->post('/login', 'Auth\\UserAuthController@login');
+    $router->post('/logout', 'Auth\\UserAuthController@logout');
 });
 
 // With Authorization End-Point
@@ -33,41 +33,41 @@ Route::group(['middleware' => ['auth']], function ($router) {
     $router->delete('user/{id}', 'UserController@destroy');
 
     // Hotel End-Point
-    $router->get('/hotel', 'hotelController@index');
-    $router->get('/hotel/{id}', 'hotelController@show');
-    $router->post('/hotel', 'hotelController@update');
-    $router->put('/hotel/{id}', 'hotelController@update');
-    $router->delete('hotel/{id}', 'hotelController@destroy');
+    $router->get('/hotel', 'HotelController@index');
+    $router->get('/hotel/{id}', 'HotelController@show');
+    $router->post('/hotel', 'HotelController@store');
+    $router->put('/hotel/{id}', 'HotelController@update');
+    $router->delete('hotel/{id}', 'HotelController@destroy');
 
     // Room End-Point
     $router->get('/room', 'roomController@index');
     $router->get('/room/{id}', 'roomController@show');
-    $router->post('/room', 'roomController@update');
+    $router->post('/room', 'roomController@store');
     $router->put('/room/{id}', 'roomController@update');
     $router->delete('room/{id}', 'roomController@destroy');
 
     // Reservation End-Point
     $router->get('/reservation', 'reservationController@index');
     $router->get('/reservation/{id}', 'reservationController@show');
-    $router->post('/reservation', 'reservationController@update');
+    $router->post('/reservation', 'reservationController@store');
     $router->put('/reservation/{id}', 'reservationController@update');
     $router->delete('reservation/{id}', 'reservationController@destroy');
 
     // Bill End-Point
-    $router->get('/bill', 'billReservation@index');
-    $router->get('/bill/{id}', 'billReservation@show');
-    $router->post('/bill', 'billReservation@update');
-    $router->put('/bill/{id}', 'billReservation@update');
-    $router->delete('bill/{id}', 'billReservation@destroy');
+    $router->get('/bill', 'BillController@index');
+    $router->get('/bill/{id}', 'BillController@show');
+    $router->post('/bill', 'BillController@store');
+    $router->put('/bill/{id}', 'BillController@update');
+    $router->delete('bill/{id}', 'BillController@destroy');
 });
 
 // Without Authorization End-Point
 Route::group(['prefix' => 'public'], function () use ($router) {
     // Hotel End-Point
-    $router->get('/hotel', 'hotelController@index');
-    $router->get('/hotel/{id}', 'hotelController@show');
+    $router->get('/hotel', 'HotelController@index');
+    $router->get('/hotel/{id}', 'HotelController@show');
 
     // Room End-Point
-    $router->get('/room', 'roomController@index');
-    $router->get('/room/{id}', 'roomController@show');
+    $router->get('/room', 'RoomController@index');
+    $router->get('/room/{id}', 'RoomController@show');
 });

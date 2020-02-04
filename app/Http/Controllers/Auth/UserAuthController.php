@@ -4,26 +4,21 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
+use App\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 
 class UserAuthController extends Controller
 {
-    /**
-     * Store a new Petugas
-     * 
-     * @param Request $request
-     * @return Response
-     */
     public function register(Request $request)
     {
         // Validation
         $this->validate($request, [
             'full_name' => 'required|string|min:5',
-            'email' => 'required|email|unique:petugas',
-            'password' => 'required|confirmed|min:6',
-            'phone_number' => 'required'
+            'email' => 'required|email|unique:users',
+            'password' => 'required|confirmed',
+            'phone_number' => 'required',
+            'role' => 'required|in:admin,guest'
         ]);
 
         $input = $request->all();
@@ -32,9 +27,10 @@ class UserAuthController extends Controller
         // Validation Starts
         $validationRules = [
             'full_name' => 'required|string|min:5',
-            'email' => 'required|email|unique:petugas',
-            'password' => 'required|confirmed|min:6',
-            'phone_number' => 'required'
+            'email' => 'required|email|unique:users',
+            'password' => 'required|confirmed',
+            'phone_number' => 'required',
+            'role' => 'required|in:admin,guest'
         ];
 
         $validator = Validator::make($input, $validationRules);
@@ -49,6 +45,7 @@ class UserAuthController extends Controller
         $user->email = $request->input('email');
         $plainPassword = $request->input('password');
         $user->password = app('hash')->make($plainPassword);
+        $user->role = $request->input('role');
         $user->phone_number = $request->input('phone_number');
 
         if ($acceptHeader === 'application/json' || $acceptHeader === 'application/xml') {
@@ -100,7 +97,7 @@ class UserAuthController extends Controller
 
         $credentials = $request->only(['email', 'password']);
         if ($acceptHeader === 'application/json' || $acceptHeader === 'application/xml') {
-            if (!$token = Auth::guard('user')->attempt($credentials)) {
+            if (!$token = Auth::attempt($credentials)) {
                 # code...
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
@@ -108,7 +105,7 @@ class UserAuthController extends Controller
             $response = [
                 'token' => $token,
                 'token_type' => 'bearer',
-                'expires_in' => Auth::factory('user')->getTTL() * 60
+                'expires_in' => Auth::factory()->getTTL() * 60
             ];
 
             // Response Accept : 'application/json'
@@ -143,17 +140,11 @@ class UserAuthController extends Controller
                 'message' => 'logout'
             ];
 
-            // Response Accept : 'application/json'
+            Auth::logout();
+
             if ($acceptHeader === 'application/json') {
-                Auth::guard('user')->logout();
-
                 return response()->json($response, 200);
-            }
-
-            // Response Accept : 'application/xml'
-            else {
-                Auth::guard('user')->logout();
-
+            } else {
                 $xml = new \SimpleXMLElement('<Response/>');
 
                 $xml->addChild('status', $response['status']);
